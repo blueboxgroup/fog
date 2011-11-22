@@ -15,6 +15,8 @@ module Fog
       collection  :images
       model       :server
       collection  :servers
+      model       :location
+      collection  :locations
 
       request_path 'fog/bluebox/requests/compute'
       request :create_block
@@ -25,6 +27,8 @@ module Fog
       request :get_products
       request :get_template
       request :get_templates
+      request :get_location
+      request :get_locations
       request :create_template
       request :destroy_template
       request :reboot_block
