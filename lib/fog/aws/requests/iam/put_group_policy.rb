@@ -25,17 +25,9 @@ module Fog
             'Action'          => 'PutGroupPolicy',
             'GroupName'       => group_name,
             'PolicyName'      => policy_name,
-            'PolicyDocument'  => policy_document.to_json,
+            'PolicyDocument'  => MultiJson.encode(policy_document),
             :parser           => Fog::Parsers::AWS::IAM::Basic.new
           )
-        end
-
-      end
-
-      class Mock
-
-        def put_group_policy(group_name, policy_name, policy_document)
-          Fog::Mock.not_implemented
         end
 
       end

@@ -23,7 +23,7 @@ module Fog
         #         * 'InstanceId'<~String>
         #         * 'ReasonCode'<~String>
         def describe_instance_health(lb_name, instance_ids = [])
-          params = AWS.indexed_param('Instances.member.%d.InstanceId', [*instance_ids])
+          params = Fog::AWS.indexed_param('Instances.member.%d.InstanceId', [*instance_ids])
           request({
             'Action'           => 'DescribeInstanceHealth',
             'LoadBalancerName' => lb_name,
@@ -34,13 +34,39 @@ module Fog
       end
 
       class Mock
-
         def describe_instance_health(lb_name, instance_ids = [])
-          Fog::Mock.not_implemented
+          raise Fog::AWS::ELB::NotFound unless load_balancer = self.data[:load_balancers][lb_name]
+
+          instance_ids = [*instance_ids]
+          instance_ids = load_balancer['Instances'].collect { |i| i['InstanceId'] } unless instance_ids.any?
+          data = instance_ids.map do |id|
+            unless Fog::Compute::AWS::Mock.data[@region][@aws_access_key_id][:instances][id]
+              raise Fog::AWS::ELB::InvalidInstance
+            end
+
+            {
+              'Description' => "",
+              'InstanceId' => id,
+              'ReasonCode' => "",
+              'State' => 'OutOfService'
+            }
+          end
+
+          response = Excon::Response.new
+          response.status = 200
+
+          response.body = {
+            'ResponseMetadata' => {
+              'RequestId' => Fog::AWS::Mock.request_id
+            },
+            'DescribeInstanceHealthResult' => {
+              'InstanceStates' => data
+            }
+          }
+
+          response
         end
-
       end
-
     end
   end
 end

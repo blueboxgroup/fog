@@ -25,9 +25,9 @@ module Fog
           class_eval <<-EOS, __FILE__, __LINE__
             def #{name}=(new_#{name})
               attributes[:#{name}] = case new_#{name}
-              when 'true'
+              when true,'true'
                 true
-              when 'false'
+              when false,'false'
                 false
               end
             end
@@ -71,8 +71,10 @@ module Fog
             class_eval <<-EOS, __FILE__, __LINE__
               def #{name}=(new_data)
                 if new_data.is_a?(Hash)
-                  if new_data[:#{squash}] || new_data["#{squash}"]
-                    attributes[:#{name}] = new_data[:#{squash}] || new_data["#{squash}"]
+                  if new_data.has_key?(:'#{squash}')
+                    attributes[:#{name}] = new_data[:'#{squash}']
+                  elsif new_data.has_key?("#{squash}")
+                    attributes[:#{name}] = new_data["#{squash}"]
                   else
                     attributes[:#{name}] = [ new_data ]
                   end
@@ -113,12 +115,18 @@ module Fog
 
     module InstanceMethods
 
-      def _dump
+      def _dump(level)
         Marshal.dump(attributes)
       end
 
       def attributes
         @attributes ||= {}
+      end
+
+      def dup
+        copy = super
+        copy.dup_attributes!
+        copy
       end
 
       def identity
@@ -134,7 +142,7 @@ module Fog
           unless self.class.ignored_attributes.include?(key)
             if aliased_key = self.class.aliases[key]
               send("#{aliased_key}=", value)
-            elsif (public_methods | private_methods).detect {|method| ["#{key}=", :"#{key}="].include?(method)}
+            elsif self.respond_to?("#{key}=",true)
               send("#{key}=", value)
             else
               attributes[key] = value
@@ -150,17 +158,35 @@ module Fog
 
       # check that the attributes specified in args exist and is not nil
       def requires(*args)
+        missing = missing_attributes(args)
+        if missing.length == 1
+          raise(ArgumentError, "#{missing.first} is required for this operation")
+        elsif missing.any?
+          raise(ArgumentError, "#{missing[0...-1].join(", ")} and #{missing[-1]} are required for this operation")
+        end
+      end
+
+      def requires_one(*args)
+        missing = missing_attributes(args)
+        if missing.length == args.length
+          raise(ArgumentError, "#{missing[0...-1].join(", ")} or #{missing[-1]} are required for this operation")
+        end
+      end
+
+      protected
+
+      def missing_attributes(args)
         missing = []
         for arg in [:connection] | args
-          missing << arg unless send("#{arg}")
-        end
-        unless missing.empty?
-          if missing.length == 1
-            raise(ArgumentError, "#{missing.first} is required for this operation")
-          else
-            raise(ArgumentError, "#{missing[0...-1].join(", ")} and #{missing[-1]} are required for this operation")
+          unless send("#{arg}") || attributes.has_key?(arg)
+            missing << arg
           end
         end
+        missing
+      end
+
+      def dup_attributes!
+        @attributes = @attributes.dup
       end
 
       private

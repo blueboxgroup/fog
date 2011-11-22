@@ -1,59 +1,30 @@
-module Vcloud
+class Vcloud < Fog::Bin
   class << self
 
-    def services
-      if Fog.credentials.has_key?(:vcloud)
-        Fog.credentials[:vcloud].keys.sort { |a,b| a.to_s <=> b.to_s }
+    def class_for(key)
+      case key
+      when :compute
+        Fog::Vcloud::Compute
       else
-        []
+        raise ArgumentError, "Unrecognized service: #{key}"
       end
     end
 
-    def registered_services
-      Vcloud.services.map { |service| ":" << service.to_s }.join(", ")
-    end
-
-    def complete_service_options?(service)
-      if Fog.credentials.has_key?(:vcloud)
-        if Fog.credentials[:vcloud].has_key?(service)
-          service = Fog.credentials[:vcloud][service]
-          if Fog::Vcloud.requirements.all? { |option| service.has_key?(option) }
-            return true
-          end
+    def [](service)
+      @@connections ||= Hash.new do |hash, key|
+        hash[key] = case key
+        when :compute
+          Fog::Compute.new(:provider => 'Vcloud')
+        else
+          raise ArgumentError, "Unrecognized service: #{key.inspect}"
         end
       end
-      false
+      @@connections[service]
     end
 
-    if Vcloud.services.any? && Vcloud.services.all? { |service| Vcloud.complete_service_options?(service) }
-
-      def initialized?
-        true
-      end
-
-      def startup_notice
-        Formatador.display_line("You have access to the following Vcloud services: #{Vcloud.registered_services}.")
-      end
-
-      def [](service)
-        @@connections ||= Hash.new do |hash, key|
-          if credentials = Fog.credentials[:vcloud][key]
-            credentials = credentials.dup
-            _module_ = eval(credentials.delete(:module))
-            hash[key] = _module_.new(credentials)
-          else
-            raise ArgumentError.new("Unregistered service: :#{key}. Registered services are: #{Vcloud.registered_services}")
-          end
-        end
-        @@connections[service]
-      end
-
-    else
-
-      def initialized?
-        false
-      end
-
+    def services
+      Fog::Vcloud.services
     end
+
   end
 end

@@ -1,4 +1,9 @@
 module Fog
+
+  def self.services
+    @services ||= {}
+  end
+
   class Service
 
     class Error < Fog::Errors::Error; end
@@ -8,6 +13,10 @@ module Fog
 
       def collections
         service.collections
+      end
+
+      def mocked_requests
+        service.mocked_requests
       end
 
       def requests
@@ -20,6 +29,9 @@ module Fog
 
       def inherited(child)
         child.class_eval <<-EOS, __FILE__, __LINE__
+          class Error < Fog::Service::Error; end
+          class NotFound < Fog::Service::NotFound; end
+
           module Collections
             include Fog::Service::Collections
 
@@ -44,6 +56,7 @@ module Fog
         end
 
         validate_options(options)
+        coerce_options(options)
         setup_requirements
 
         if Fog.mocking?
@@ -76,6 +89,15 @@ module Fog
           end
           for request in requests
             require [@request_path, request].join('/')
+            if service::Mock.method_defined?(request)
+              mocked_requests << request
+            else
+              service::Mock.module_eval <<-EOS, __FILE__, __LINE__
+                def #{request}(*args)
+                  Fog::Mock.not_implemented
+                end
+              EOS
+            end
           end
           @required = true
         end
@@ -91,6 +113,30 @@ module Fog
 
       def collections
         @collections ||= []
+      end
+
+      def coerce_options(options)
+        options.each do |key, value|
+          value_string = value.to_s.downcase
+          if value.nil?
+            options.delete(key)
+          elsif value == value_string.to_i.to_s
+            options[key] = value.to_i
+          else
+            options[key] = case value_string
+            when 'false'
+              false
+            when 'true'
+              true
+            else
+              value
+            end
+          end
+        end
+      end
+
+      def mocked_requests
+        @mocked_requests ||= []
       end
 
       def model(new_model)
@@ -126,19 +172,17 @@ module Fog
       end
 
       def recognized
-        @recognized ||= []
-      end
-
-      def reset_data(keys=Mock.data.keys)
-        Mock.reset_data(keys)
-      end
-
-      def reset_data(keys=Mock.data.keys)
-        Mock.reset_data(keys)
+        @recognized ||= [:connection_options]
       end
 
       def validate_options(options)
-        missing = requirements - options.keys
+        keys = []
+        for key, value in options
+          unless value.nil?
+            keys << key
+          end
+        end
+        missing = requirements - keys
         unless missing.empty?
           raise ArgumentError, "Missing required arguments: #{missing.join(', ')}"
         end

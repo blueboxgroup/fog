@@ -2,18 +2,11 @@ module Fog
   module SSH
 
     def self.new(address, username, options = {})
-      unless options[:key_data] || options[:keys] || options[:password]
-        raise ArgumentError.new(':key_data, :keys or :password are required to initialize SSH')
-      end
       if Fog.mocking?
         Fog::SSH::Mock.new(address, username, options)
       else
         Fog::SSH::Real.new(address, username, options)
       end
-    end
-
-    def self.reset_data(keys=Mock.data.keys)
-      Mock.reset_data(keys)
     end
 
     class Mock
@@ -40,6 +33,13 @@ module Fog
 
       def initialize(address, username, options)
         require 'net/ssh'
+
+        key_manager = Net::SSH::Authentication::KeyManager.new(nil, options)
+
+        unless options[:key_data] || options[:keys] || options[:password] || key_manager.agent
+          raise ArgumentError.new(':key_data, :keys, :password or a loaded ssh-agent is required to initialize SSH')
+        end
+
         @address  = address
         @username = username
         @options  = { :paranoid => false }.merge(options)
@@ -51,11 +51,10 @@ module Fog
         begin
           Net::SSH.start(@address, @username, @options) do |ssh|
             commands.each do |command|
-              escaped_command = command.sub(/'/, %{'"'"'})
-              result = Result.new(escaped_command)
+              result = Result.new(command)
               ssh.open_channel do |ssh_channel|
                 ssh_channel.request_pty
-                ssh_channel.exec(%{bash -lc '#{escaped_command}'}) do |channel, success|
+                ssh_channel.exec(command) do |channel, success|
                   unless success
                     raise "Could not execute command: #{command.inspect}"
                   end

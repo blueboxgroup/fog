@@ -25,21 +25,27 @@ module Fog
 
     def reload
       requires :identity
-      if data = collection.get(identity)
-        new_attributes = data.attributes
-        merge_attributes(new_attributes)
-        self
+
+      return unless data = begin
+        collection.get(identity)
+      rescue Excon::Errors::SocketError
+        nil
       end
+
+      new_attributes = data.attributes
+      merge_attributes(new_attributes)
+      self
     end
 
-    def to_json
-      attributes.to_json
+    def to_json(options = {})
+      require 'multi_json'
+      MultiJson.encode(attributes)
     end
 
-    def wait_for(timeout=600, interval=1, &block)
+    def wait_for(timeout=Fog.timeout, interval=1, &block)
       reload
+      retries = 3
       Fog.wait_for(timeout, interval) do
-        retries = 3
         if reload
           retries = 3
         elsif retries > 0

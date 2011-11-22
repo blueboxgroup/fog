@@ -30,13 +30,22 @@ module Fog
       end
 
       class Mock
-
         def delete_load_balancer(lb_name)
-          Fog::Mock.not_implemented
+          response = Excon::Response.new
+          response.status = 200
+
+          self.data[:load_balancers].delete(lb_name)
+
+          response.body = {
+            'ResponseMetadata' => {
+              'RequestId' => Fog::AWS::Mock.request_id
+            },
+            'DeleteLoadBalancerResult' => nil
+          }
+
+          response
         end
-
       end
-
     end
   end
 end

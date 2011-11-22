@@ -16,7 +16,7 @@ module Fog
         #   * body<~Hash>:
         #     * 'AccessKey'<~Hash>:
         #       * 'AccessKeyId'<~String> -
-        #       * 'Username'<~String> -
+        #       * 'UserName'<~String> -
         #       * 'SecretAccessKey'<~String> -
         #       * 'Status'<~String> -
         #     * 'RequestId'<~String> - Id of the request
@@ -29,14 +29,6 @@ module Fog
             'Action'    => 'CreateAccessKey',
             :parser     => Fog::Parsers::AWS::IAM::CreateAccessKey.new
           }.merge!(options))
-        end
-
-      end
-
-      class Mock
-
-        def create_access_key(user_name = nil)
-          Fog::Mock.not_implemented
         end
 
       end

@@ -4,7 +4,7 @@ class Google < Fog::Bin
     def class_for(key)
       case key
       when :storage
-        Fog::Google::Storage
+        Fog::Storage::Google
       else 
         raise ArgumentError, "Unsupported #{self} service: #{key}"
       end
@@ -14,16 +14,17 @@ class Google < Fog::Bin
       @@connections ||= Hash.new do |hash, key|
         hash[key] = case key
         when :storage
+          Fog::Logger.warning("Google[:storage] is not recommended, use Storage[:google] for portability")
           Fog::Storage.new(:provider => 'Google')
         else
-          raise ArgumentError, "Unrecognized service: #{service}"
+          raise ArgumentError, "Unrecognized service: #{key.inspect}"
         end
       end
       @@connections[service]
     end
 
     def services
-      [:storage]
+      Fog::Google.services
     end
 
   end

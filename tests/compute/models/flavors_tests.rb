@@ -1,8 +1,10 @@
 for provider, config in compute_providers
 
-  Shindo.tests("#{provider}::Compute | flavors", [provider.to_s.downcase]) do
+  next if [:glesys, :voxel].include?(provider)
 
-    flavors_tests(provider[:compute], (config[:flavors_attributes] || {}), config[:mocked])
+  Shindo.tests("Fog::Compute[:#{provider}] | flavors", [provider]) do
+
+    flavors_tests(Fog::Compute[provider], (config[:flavors_attributes] || {}), config[:mocked])
 
   end
 

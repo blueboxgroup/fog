@@ -4,9 +4,9 @@ class Linode < Fog::Bin
     def class_for(key)
       case key
       when :compute
-        Fog::Linode::Compute
+        Fog::Compute::Linode
       when :dns
-        Fog::Linode::DNS
+        Fog::DNS::Linode
       else
         raise ArgumentError, "Unsupported #{self} service: #{key}"
       end
@@ -16,24 +16,20 @@ class Linode < Fog::Bin
       @@connections ||= Hash.new do |hash, key|
         hash[key] = case key
         when :compute
+          Fog::Logger.warning("Linode[:compute] is not recommended, use Compute[:linode] for portability")
           Fog::Compute.new(:provider => 'Linode')
         when :dns
+          Fog::Logger.warning("Linode[:dns] is not recommended, use DNS[:linode] for portability")
           Fog::DNS.new(:provider => 'Linode')
-        when :linode
-          location = caller.first
-          warning = "[yellow][WARN] Linode[:linode] is deprecated, use Linode[:compute] instead[/]"
-          warning << " [light_black](" << location << ")[/] "
-          Formatador.display_line(warning)
-          Fog::Compute.new(:provider => 'Linode')
         else
-          raise ArgumentError, "Unrecognized service: #{service}"
+          raise ArgumentError, "Unrecognized service: #{key.inspect}"
         end
       end
       @@connections[service]
     end
 
     def services
-      [:compute, :dns]
+      Fog::Linode.services
     end
 
   end

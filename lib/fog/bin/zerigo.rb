@@ -4,7 +4,7 @@ class Zerigo < Fog::Bin
     def class_for(key)
       case key
       when :dns
-        Fog::Zerigo::DNS
+        Fog::DNS::Zerigo
       else 
         raise ArgumentError, "Unrecognized service: #{key}"
       end
@@ -14,16 +14,17 @@ class Zerigo < Fog::Bin
       @@connections ||= Hash.new do |hash, key|
         hash[key] = case key
         when :dns
+          Fog::Logger.warning("Zerigo[:dns] is not recommended, use DNS[:zerigo] for portability")
           Fog::DNS.new(:provider => 'Zerigo')
         else
-          raise ArgumentError, "Unrecognized service: #{service}"
+          raise ArgumentError, "Unrecognized service: #{key.inspect}"
         end
       end
       @@connections[service]
     end
 
     def services
-      [:dns]
+      Fog::Zerigo.services
     end
 
   end

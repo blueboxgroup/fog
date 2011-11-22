@@ -4,10 +4,12 @@ require 'shindo'
 require File.join(File.dirname(__FILE__), '..', 'lib', 'fog')
 require File.join(File.dirname(__FILE__), '..', 'tests', 'helper')
 
-Shindo.tests('dns tests', 'dns') do
+Shindo.tests('dns examples', 'dns') do
 
   # iterate over all the providers
   Fog.providers.each do |provider|
+
+    provider = eval(provider) # convert from string to object
 
     # skip if provider does not have storage
     next unless provider.respond_to?(:services) && provider.services.include?(:dns)
@@ -33,9 +35,9 @@ Shindo.tests('dns tests', 'dns') do
       #   type is the type of record to create
       tests('@record = @zone.records.create').succeeds do
         @record = @zone.records.create(
-          :ip => '1.2.3.4',
-          :name => 'www.fogdnsexamples.com',
-          :type => 'A'
+          :value  => '1.2.3.4',
+          :name   => 'www.fogdnsexamples.com',
+          :type   => 'A'
         )
       end
 

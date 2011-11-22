@@ -24,18 +24,10 @@ module Fog
           request(
             'Action'          => 'PutUserPolicy',
             'PolicyName'      => policy_name,
-            'PolicyDocument'  => policy_document.to_json,
+            'PolicyDocument'  => MultiJson.encode(policy_document),
             'UserName'        => user_name,
             :parser           => Fog::Parsers::AWS::IAM::Basic.new
           )
-        end
-
-      end
-
-      class Mock
-
-        def put_user_policy(user_name, policy_name, policy_document)
-          Fog::Mock.not_implemented
         end
 
       end

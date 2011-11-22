@@ -2,28 +2,33 @@ require 'yaml'
 
 module Fog
   require 'fog/core/deprecation'
-  extend Fog::Deprecation
-  self_deprecate(:config_path, :credentials_path)
 
   # Assign a new credential to use from configuration file
   #   @param [String, Symbol] new_credential name of new credential to use
-  #   @ return [String, Symbol] name of the new credential
+  #   @ return [Symbol] name of the new credential
   def self.credential=(new_credential)
-    @credential = new_credential
+    @credentials = nil
+    @credential = new_credential && new_credential.to_sym
   end
 
   # @return [String, Symbol] The credential to use in Fog
   def self.credential
-    @credential ||= :default
+    @credential ||= ( ENV["FOG_CREDENTIAL"] && ENV["FOG_CREDENTIAL"].to_sym ) || :default
   end
 
   # @return [String] The path for configuration_file
   def self.credentials_path
-    @credential_path ||= File.expand_path(ENV["FOG_RC"] || '~/.fog')
+    @credential_path ||= begin
+      path = ENV["FOG_RC"] || (ENV['HOME'] && File.directory?(ENV['HOME']) && '~/.fog')
+      File.expand_path(path) if path
+    rescue
+      nil
+    end
   end
 
   # @return [String] The new path for credentials file
   def self.credentials_path=(new_credentials_path)
+    @credentials = nil
     @credential_path = new_credentials_path
   end
 
@@ -31,58 +36,28 @@ module Fog
   # @raise [LoadError] Configuration unavailable in configuration file
   def self.credentials
     @credentials  ||= begin
-      if File.exists?(credentials_path)
-        credentials = YAML.load_file(credentials_path)
-        (credentials && credentials[credential]) or raise LoadError.new missing_credentials
+      if credentials_path && File.exists?(credentials_path)
+        credentials = self.symbolize_credentials(YAML.load_file(credentials_path))
+        (credentials && credentials[credential]) || Fog::Errors.missing_credentials
       else
         {}
       end
     end
   end
 
-private
-
-  # @return [String] The error message that will be raised, if credentials cannot be found
-  def self.missing_credentials
-    <<-YML
-Missing Credentials
-
-To run as '#{credential}', add the following to your resource config file: #{credentials_path}
-An alternate file may be used by placing its path in the FOG_RC environment variable
-
-#######################################################
-# Fog Credentials File
-#
-# Key-value pairs should look like:
-# :aws_access_key_id:                 022QF06E7MXBSAMPLE
-:#{credential}:
-  :aws_access_key_id:
-  :aws_secret_access_key:
-  :bluebox_api_key:
-  :bluebox_customer_id:
-  :brightbox_client_id:
-  :brightbox_secret:
-  :go_grid_api_key:
-  :go_grid_shared_secret:
-  :google_storage_access_key_id:
-  :google_storage_secret_access_key:
-  :linode_api_key:
-  :local_root:
-  :new_servers_password:
-  :new_servers_username:
-  :public_key_path:
-  :private_key_path:
-  :rackspace_api_key:
-  :rackspace_username:
-  :slicehost_password:
-  :terremark_username:
-  :terremark_password:
-  :zerigo_email:
-  :zerigo_token:
-#
-# End of Fog Credentials File
-#######################################################
-
-YML
+  # @return [Hash] The newly assigned credentials
+  def self.credentials=(new_credentials)
+    @credentials = new_credentials
   end
+
+  def self.symbolize_credentials(args)
+    if args.is_a? Hash
+      Hash[ *args.collect do |key, value|
+        [key.to_sym, self.symbolize_credentials(value)]
+      end.flatten ]
+    else
+      args
+    end
+  end
+
 end

@@ -6,6 +6,10 @@ module Fog
     @mocking = true
   end
 
+  def self.unmock!
+    @mocking = false
+  end
+
   def self.mock?
     @mocking
   end
@@ -61,6 +65,26 @@ module Fog
         selection << characters[position..position]
       end
       selection
+    end
+
+    def self.reset
+      mocked_services = []
+      Fog.constants.map do |x|
+        x_const = Fog.const_get(x)
+        x_const.respond_to?(:constants) && x_const.constants.map do |y|
+          y_const = x_const.const_get(y)
+          y_const.respond_to?(:constants) && y_const.constants.map do |z|
+            if z.to_sym == :Mock
+              mocked_services << y_const.const_get(z)
+            end
+          end
+        end
+      end
+
+      for mocked_service in mocked_services
+        next unless mocked_service.respond_to?(:reset)
+        mocked_service.reset
+      end
     end
 
   end

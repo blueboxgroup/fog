@@ -3,8 +3,8 @@ class GoGrid < Fog::Bin
 
     def class_for(key)
       case key
-      when :compute, :servers
-        Fog::GoGrid::Compute
+      when :compute
+        Fog::Compute::GoGrid
       else 
         raise ArgumentError, "Unsupported #{self} service: #{key}"
       end
@@ -14,22 +14,17 @@ class GoGrid < Fog::Bin
       @@connections ||= Hash.new do |hash, key|
         hash[key] = case key
         when :compute
-          Fog::Compute.new(:provider => 'GoGrid')
-        when :servers
-          location = caller.first
-          warning = "[yellow][WARN] GoGrid[:servers] is deprecated, use GoGrid[:compute] instead[/]"
-          warning << " [light_black](" << location << ")[/] "
-          Formatador.display_line(warning)
+          Fog::Logger.warning("GoGrid[:compute] is not recommended, use Compute[:gogrid] for portability")
           Fog::Compute.new(:provider => 'GoGrid')
         else
-          raise ArgumentError, "Unrecognized service: #{service}"
+          raise ArgumentError, "Unrecognized service: #{key.inspect}"
         end
       end
       @@connections[service]
     end
 
     def services
-      [:compute]
+      Fog::GoGrid.services
     end
 
   end
