@@ -28,7 +28,7 @@ module Fog
         def initialize(attributes={})
           self.flavor_id   ||= '94fd37a7-2606-47f7-84d5-9000deda52ae' # Block 1GB Virtual Server
           self.image_id    ||= '03807e08-a13d-44e4-b011-ebec7ef2c928' # Ubuntu LTS 10.04 64bit
-          self.location_id ||= '02b87c73-02de-445d-9cae-98e914c70d84' # Seattle, WA
+          self.location_id ||= '37c2bd9a-3e81-46c9-b6e2-db44a25cc675' # Seattle, WA
           super
         end
 
@@ -92,7 +92,6 @@ module Fog
           if identity.nil?  # new record
             raise(ArgumentError, "password or public_key is required for this operation") if !password && !public_key
             options['ssh_public_key'] = public_key if public_key
-            p @password
             options['password'] = password if @password
           end
 
@@ -106,6 +105,7 @@ module Fog
 
           options['username'] = username
           options['hostname'] = hostname if @hostname
+          options['location'] = location_id if location_id
           data = connection.create_block(flavor_id, image_id, options)
           merge_attributes(data.body)
           true
